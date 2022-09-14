@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"encoding/json"
-	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -49,20 +49,18 @@ func main() {
 				postUrl := el.ChildAttr("td:nth-child(3) > a", "href")
 
 				// Check if post is either a show HN or Ask HN type of post
+				// Then we need to add the domain url
 				if strings.Contains(postUrl, "item?id=") {
-
+					postUrl = "news.ycombinator.com/" + postUrl
 				}
-
 				posts = append(posts, Post{
 					Title: postTitle,
 					Url:   postUrl,
 				})
-
 			}
 		})
-		myJson, _ := json.Marshal((P{Posts: posts}))
-		fmt.Println(string(myJson))
+		file, _ := json.Marshal((P{Posts: posts}))
+		_ = ioutil.WriteFile("assets/posts.json", file, 0644)
 	})
-
 	c.Visit("https://news.ycombinator.com")
 }
