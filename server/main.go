@@ -1,11 +1,9 @@
 package main
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"io/ioutil"
 	"log"
-	"os"
 	"strings"
 
 	"github.com/gocolly/colly"
@@ -38,19 +36,6 @@ func main() {
 	defer ch.Close()
 
 	var posts []Post
-
-	fName := "assets/data.csv"
-	file, err := os.Create(fName)
-
-	if err != nil {
-		log.Fatalf("Could not create file, err: %q", err)
-		return
-	}
-
-	defer file.Close()
-
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
 
 	c := colly.NewCollector(
 		colly.AllowedDomains("news.ycombinator.com"),
