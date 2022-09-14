@@ -2,26 +2,28 @@ package main
 
 import (
 	"encoding/csv"
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gocolly/colly"
 )
 
-type post struct {
-	title string
-	url   string
+type Post struct {
+	Title string
+	Url   string
 }
 
-func newPost(title string, url string) *post {
-	p := post{}
-	p.title = title
-	p.url = url
-	return &p
+type P struct {
+	Posts []Post
 }
 
 func main() {
-	fName := "data.csv"
+	var posts []Post
+
+	fName := "assets/data.csv"
 	file, err := os.Create(fName)
 
 	if err != nil {
@@ -46,12 +48,20 @@ func main() {
 				postTitle := el.ChildText("td:nth-child(3) > a")
 				postUrl := el.ChildAttr("td:nth-child(3) > a", "href")
 
-				writer.Write([]string{
-					postTitle,
-					postUrl,
+				// Check if post is either a show HN or Ask HN type of post
+				if strings.Contains(postUrl, "item?id=") {
+
+				}
+
+				posts = append(posts, Post{
+					Title: postTitle,
+					Url:   postUrl,
 				})
+
 			}
 		})
+		myJson, _ := json.Marshal((P{Posts: posts}))
+		fmt.Println(string(myJson))
 	})
 
 	c.Visit("https://news.ycombinator.com")
