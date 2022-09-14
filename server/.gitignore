@@ -27,4 +27,4 @@ go.work
 *.csv
 
 # json
-/assets/*
+*.json
