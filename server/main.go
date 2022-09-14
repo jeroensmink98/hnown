@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"strings"
 
@@ -13,10 +12,6 @@ import (
 type Post struct {
 	Title string
 	Url   string
-}
-
-type P struct {
-	Posts []Post
 }
 
 func failOnError(err error, msg string) {
@@ -35,13 +30,23 @@ func main() {
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
 
-	var posts []Post
+	// We create a Queue to send the message to.
+	q, err := ch.QueueDeclare(
+		"hn-post-queue", // name
+		false,           // durable
+		false,           // delete when unused
+		false,           // exclusive
+		false,           // no-wait
+		nil,             // arguments
+	)
+	failOnError(err, "Failed to declare a queue")
 
 	c := colly.NewCollector(
 		colly.AllowedDomains("news.ycombinator.com"),
 	)
 
 	c.OnHTML(".itemlist", func(e *colly.HTMLElement) {
+		// We loop over every <tr> item
 		e.ForEach("tr", func(_ int, el *colly.HTMLElement) {
 
 			// Check if the td item is not emtpy
@@ -54,14 +59,27 @@ func main() {
 				if strings.Contains(postUrl, "item?id=") {
 					postUrl = "news.ycombinator.com/" + postUrl
 				}
-				posts = append(posts, Post{
-					Title: postTitle,
-					Url:   postUrl,
-				})
+
+				// Create a JSON object of every post
+				b, err := json.Marshal(&Post{Title: postTitle, Url: postUrl})
+
+				// We set the payload for the message.
+				body := b
+				err = ch.Publish(
+					"",     // exchange
+					q.Name, // routing key
+					false,  // mandatory
+					false,  // immediate
+					amqp.Publishing{
+						ContentType: "application/json",
+						Body:        body,
+					})
+
+				// If there is an error publishing the message, a log will be displayed in the terminal.
+				failOnError(err, "Failed to publish a message")
+				log.Printf(" [x] sending message: %s", body)
 			}
 		})
-		file, _ := json.Marshal((P{Posts: posts}))
-		_ = ioutil.WriteFile("assets/posts.json", file, 0644)
 	})
 	c.Visit("https://news.ycombinator.com")
 }
