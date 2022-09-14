@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/gocolly/colly"
+	"github.com/streadway/amqp"
 )
 
 type Post struct {
@@ -20,7 +21,22 @@ type P struct {
 	Posts []Post
 }
 
+func failOnError(err error, msg string) {
+	if err != nil {
+		log.Fatalf("%s: %s", msg, err)
+	}
+}
+
 func main() {
+	// Here we connect to RabbitMQ or send a message if there are any errors connecting.
+	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	failOnError(err, "Failed to connect to RabbitMQ")
+	defer conn.Close()
+
+	ch, err := conn.Channel()
+	failOnError(err, "Failed to open a channel")
+	defer ch.Close()
+
 	var posts []Post
 
 	fName := "assets/data.csv"
